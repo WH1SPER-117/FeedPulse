@@ -68,3 +68,43 @@ const analyzeAndUpdate = async (
     console.error("AI update failed:", err);
   }
 };
+
+export const getFeedbacks = async (req: Request, res: Response) => {
+  try {
+    const { page = "1", limit = "10", category, status, sentiment } = req.query;
+
+    const query: any = {};
+
+    // Filters
+    if (category) query.category = category;
+    if (status) query.status = status;
+    if (sentiment) query.ai_sentiment = sentiment;
+
+    const pageNum = parseInt(page as string);
+    const limitNum = parseInt(limit as string);
+
+    const feedbacks = await Feedback.find(query)
+      .sort({ createdAt: -1 }) // newest first
+      .skip((pageNum - 1) * limitNum)
+      .limit(limitNum);
+
+    const total = await Feedback.countDocuments(query);
+
+    return res.status(200).json({
+      success: true,
+      data: feedbacks,
+      pagination: {
+        total,
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.ceil(total / limitNum),
+      },
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch feedback",
+      error: error.message,
+    });
+  }
+};
