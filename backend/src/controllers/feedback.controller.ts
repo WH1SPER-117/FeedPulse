@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import Feedback from "../models/feedback.model";
+import { analyzeFeedback } from "../services/gemini.service";
 
 export const createFeedback = async (req: Request, res: Response) => {
   try {
@@ -28,6 +29,9 @@ export const createFeedback = async (req: Request, res: Response) => {
       submitterEmail,
     });
 
+    // 🔥 Trigger AI (non-blocking)
+    analyzeAndUpdate(feedback._id.toString(), title, description);
+
     return res.status(201).json({
       success: true,
       data: feedback,
@@ -39,5 +43,28 @@ export const createFeedback = async (req: Request, res: Response) => {
       message: "Server error",
       error: error.message,
     });
+  }
+};
+
+const analyzeAndUpdate = async (
+  id: string,
+  title: string,
+  description: string
+) => {
+  try {
+    const ai = await analyzeFeedback(title, description);
+
+    if (!ai) return;
+
+    await Feedback.findByIdAndUpdate(id, {
+      ai_category: ai.category,
+      ai_sentiment: ai.sentiment,
+      ai_priority: ai.priority_score,
+      ai_summary: ai.summary,
+      ai_tags: ai.tags,
+      ai_processed: true,
+    });
+  } catch (err) {
+    console.error("AI update failed:", err);
   }
 };
