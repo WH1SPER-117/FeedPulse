@@ -2,24 +2,19 @@ import { Request, Response } from "express";
 import Feedback from "../models/feedback.model";
 import { analyzeFeedback } from "../services/gemini.service";
 import mongoose from "mongoose";
-
+import { validateFeedback } from "../utils/validators";
 
 export const createFeedback = async (req: Request, res: Response) => {
   try {
     const { title, description, category, submitterName, submitterEmail } = req.body;
 
     // Validation
-    if (!title || !description || !category) {
-      return res.status(400).json({
-        success: false,
-        message: "Required fields missing",
-      });
-    }
+    const errorMsg = validateFeedback(req.body);
 
-    if (description.length < 20) {
+    if (errorMsg) {
       return res.status(400).json({
         success: false,
-        message: "Description must be at least 20 characters",
+        message: errorMsg,
       });
     }
 
@@ -111,16 +106,12 @@ export const getFeedbacks = async (req: Request, res: Response) => {
   }
 };
 
-import { Request, Response } from "express";
-import mongoose from "mongoose";
-import Feedback from "../models/feedback.model";
-
 export const getFeedbackById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
     // 1. Validate ObjectId
-    if (!mongoose.Types.ObjectId.isValid(id)) {
+    if (!mongoose.Types.ObjectId.isValid(id as string)) {
       return res.status(400).json({
         success: false,
         message: "Invalid feedback ID",
