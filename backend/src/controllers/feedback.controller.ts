@@ -219,3 +219,58 @@ export const deleteFeedback = async (req: Request, res: Response) => {
     });
   }
 };
+
+export const getFeedbackSummary = async (req: Request, res: Response) => {
+  try {
+    // Total count
+    const total = await Feedback.countDocuments();
+
+    // Category aggregation
+    const byCategoryRaw = await Feedback.aggregate([
+      { $group: { _id: "$category", count: { $sum: 1 } } }
+    ]);
+
+    const byCategory: any = {};
+    byCategoryRaw.forEach((item) => {
+      byCategory[item._id] = item.count;
+    });
+
+    // Sentiment aggregation
+    const bySentimentRaw = await Feedback.aggregate([
+      { $group: { _id: "$ai_sentiment", count: { $sum: 1 } } }
+    ]);
+
+    const bySentiment: any = {};
+    bySentimentRaw.forEach((item) => {
+      bySentiment[item._id] = item.count;
+    });
+
+    // Average priority
+    const avgPriorityRaw = await Feedback.aggregate([
+      {
+        $group: {
+          _id: null,
+          avg: { $avg: "$ai_priority" }
+        }
+      }
+    ]);
+
+    const avgPriority = avgPriorityRaw[0]?.avg || 0;
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        total,
+        byCategory,
+        bySentiment,
+        avgPriority,
+      },
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to generate summary",
+      error: error.message,
+    });
+  }
+};
