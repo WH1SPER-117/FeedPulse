@@ -108,3 +108,77 @@ export const getFeedbacks = async (req: Request, res: Response) => {
     });
   }
 };
+
+export const getFeedbackById = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const feedback = await Feedback.findById(id);
+
+    if (!feedback) {
+      return res.status(404).json({
+        success: false,
+        message: "Feedback not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: feedback,
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch feedback",
+      error: error.message,
+    });
+  }
+};
+
+export const updateFeedbackStatus = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const validStatuses = ["New", "In Review", "Resolved"];
+
+    if (!status || !validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid status value",
+      });
+    }
+
+    const feedback = await Feedback.findByIdAndUpdate(
+      id,
+      { status },
+      { new: true }
+    );
+
+    if (!feedback) {
+      return res.status(404).json({
+        success: false,
+        message: "Feedback not found",
+      });
+    }
+
+    if (feedback.status === status) {
+      return res.status(400).json({
+        success: false,
+        message: "Status already set",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: feedback,
+      message: "Status updated successfully",
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update status",
+      error: error.message,
+    });
+  }
+};
