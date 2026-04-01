@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import Feedback from "../models/feedback.model";
 import { analyzeFeedback } from "../services/gemini.service";
+import mongoose from "mongoose";
+
 
 export const createFeedback = async (req: Request, res: Response) => {
   try {
@@ -178,6 +180,41 @@ export const updateFeedbackStatus = async (req: Request, res: Response) => {
     return res.status(500).json({
       success: false,
       message: "Failed to update status",
+      error: error.message,
+    });
+  }
+};
+
+
+export const deleteFeedback = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // Validate ID format
+    if (!mongoose.Types.ObjectId.isValid(id as string)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid ID format",
+      });
+    }
+
+    const feedback = await Feedback.findByIdAndDelete(id);
+
+    if (!feedback) {
+      return res.status(404).json({
+        success: false,
+        message: "Feedback not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Feedback deleted successfully",
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to delete feedback",
       error: error.message,
     });
   }
