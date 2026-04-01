@@ -111,12 +111,26 @@ export const getFeedbacks = async (req: Request, res: Response) => {
   }
 };
 
+import { Request, Response } from "express";
+import mongoose from "mongoose";
+import Feedback from "../models/feedback.model";
+
 export const getFeedbackById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
+    // 1. Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid feedback ID",
+      });
+    }
+
+    // 2. Fetch feedback
     const feedback = await Feedback.findById(id);
 
+    // 3. Not found case
     if (!feedback) {
       return res.status(404).json({
         success: false,
@@ -124,10 +138,12 @@ export const getFeedbackById = async (req: Request, res: Response) => {
       });
     }
 
+    // 4. Success
     return res.status(200).json({
       success: true,
       data: feedback,
     });
+
   } catch (error: any) {
     return res.status(500).json({
       success: false,
@@ -136,6 +152,7 @@ export const getFeedbackById = async (req: Request, res: Response) => {
     });
   }
 };
+
 
 export const updateFeedbackStatus = async (req: Request, res: Response) => {
   try {
@@ -151,31 +168,38 @@ export const updateFeedbackStatus = async (req: Request, res: Response) => {
       });
     }
 
-    const feedback = await Feedback.findByIdAndUpdate(
-      id,
-      { status },
-      { new: true }
-    );
+    if (!mongoose.Types.ObjectId.isValid(id as string)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid feedback ID",
+      });
+    }
 
-    if (!feedback) {
+    const existing = await Feedback.findById(id);
+
+    if (!existing) {
       return res.status(404).json({
         success: false,
         message: "Feedback not found",
       });
     }
 
-    if (feedback.status === status) {
+    if (existing.status === status) {
       return res.status(400).json({
         success: false,
         message: "Status already set",
       });
     }
 
+    existing.status = status;
+    await existing.save();
+
     return res.status(200).json({
       success: true,
-      data: feedback,
+      data: existing,
       message: "Status updated successfully",
     });
+
   } catch (error: any) {
     return res.status(500).json({
       success: false,
