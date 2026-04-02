@@ -172,47 +172,39 @@ export default function Dashboard() {
   </div>
 
   {/* 🔹 Search + Sort Row */}
-  <div className="flex flex-col md:flex-row md:items-center gap-4">
+  <div className="flex flex-col md:flex-row md:items-center gap-4 w-full">
 
-    {/* Search */}
+    {/* LEFT */}
     <input
       placeholder="Search by title or summary..."
       value={search}
       onChange={(e) => setSearch(e.target.value)}
-      className="border border-gray-300 px-3 py-2 rounded-md w-full md:w-1/2 text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-blue-500"
+      className="border border-gray-300 px-3 py-2 rounded-md w-full md:flex-1 text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-blue-500"
     />
 
-    {/* Sort By */}
-    <select
-      value={sortBy}
-      onChange={(e) => setSortBy(e.target.value)}
-      className="border border-gray-300 px-3 py-2 rounded-md text-gray-800 focus:ring-2 focus:ring-blue-500"
-    >
-      <option value="date">Sort by Date</option>
-      <option value="priority">Sort by Priority</option>
-      <option value="sentiment">Sort by Sentiment</option>
-    </select>
+    {/* RIGHT */}
+    <div className="flex items-center gap-3 ml-auto">
 
-    {/* Sort Order Toggle */}
-    <button
-      onClick={() =>
-        setSortOrder((prev) => (prev === "desc" ? "asc" : "desc"))
-      }
-      className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition"
-    >
-      {sortBy === "date"
-        ? sortOrder === "desc"
-          ? "Newest → Oldest"
-          : "Oldest → Newest"
-        : sortBy === "priority"
-        ? sortOrder === "desc"
-          ? "High → Low"
-          : "Low → High"
-        : sortOrder === "desc"
-        ? "Positive → Negative"
-        : "Negative → Positive"}
-    </button>
+      <select
+        value={sortBy}
+        onChange={(e) => setSortBy(e.target.value)}
+        className="border border-gray-300 px-3 py-2 rounded-md text-gray-800 focus:ring-2 focus:ring-blue-500"
+      >
+        <option value="date">Sort by Date</option>
+        <option value="priority">Sort by Priority</option>
+        <option value="sentiment">Sort by Sentiment</option>
+      </select>
 
+      <button
+        onClick={() =>
+          setSortOrder((prev) => (prev === "desc" ? "asc" : "desc"))
+        }
+        className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition whitespace-nowrap"
+      >
+        Change Order
+      </button>
+
+    </div>
   </div>
 </div>
 
