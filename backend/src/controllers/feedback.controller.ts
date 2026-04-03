@@ -68,26 +68,51 @@ const analyzeAndUpdate = async (
 
 export const getFeedbacks = async (req: Request, res: Response) => {
   try {
-    const { page = "1", limit = "10", category, status, sentiment } = req.query;
-
+    const { page = "1", limit = "10", category, status, sentiment, search, sortBy = "date", sortOrder = "desc" } = req.query;
     const query: any = {};
 
-    // Filters
-    if (category) {
-      const categories = (category as string).split(",");
-      query.category = { $in: categories };
+
+    if (search && (search as string).trim() !== "") {
+      query.$or = [
+        { title: { $regex: search, $options: "i" } },
+        { ai_tags: { $regex: search, $options: "i" } },
+      ];
     }
-    if (status) {
-      const statuses = (status as string).split(",");
-      query.status = { $in: statuses };
+
+    // Filters
+    if (category && (category as string).trim() !== "") {
+      const categories = (category as string).split(",").filter(Boolean);
+      if (categories.length > 0) {
+        query.category = { $in: categories };
+      }
+    }
+    if (status && (status as string).trim() !== "") {
+      const statuses = (status as string).split(",").filter(Boolean);
+      if (statuses.length > 0) {
+        query.status = { $in: statuses };
+      }
     }
     if (sentiment) query.ai_sentiment = sentiment;
 
     const pageNum = parseInt(page as string);
     const limitNum = parseInt(limit as string);
 
+    let sortQuery: any = {};
+
+    if (sortBy === "date") {
+      sortQuery.createdAt = sortOrder === "desc" ? -1 : 1;
+    }
+
+    if (sortBy === "priority") {
+      sortQuery.ai_priority = sortOrder === "desc" ? -1 : 1;
+    }
+
+    if (sortBy === "sentiment") {
+      sortQuery.ai_sentiment = sortOrder === "desc" ? -1 : 1;
+    }
+
     const feedbacks = await Feedback.find(query)
-      .sort({ createdAt: -1 }) // newest first
+      .sort(sortQuery) 
       .skip((pageNum - 1) * limitNum)
       .limit(limitNum);
 
@@ -288,6 +313,21 @@ export const getFeedbackSummary = async (req: Request, res: Response) => {
 
     const avgPriority = avgPriorityRaw[0]?.avg || 0;
 
+    // Most Common Tag
+    const tagAggregation = await Feedback.aggregate([
+      { $unwind: "$ai_tags" },
+      {
+        $group: {
+          _id: "$ai_tags",
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { count: -1 } },
+      { $limit: 1 },
+    ]);
+
+    const mostCommonTag = tagAggregation[0]?._id || null;
+
     return res.status(200).json({
       success: true,
       data: {
@@ -296,6 +336,7 @@ export const getFeedbackSummary = async (req: Request, res: Response) => {
         bySentiment,
         byStatus,
         avgPriority,
+        mostCommonTag,
       },
     });
   } catch (error: any) {

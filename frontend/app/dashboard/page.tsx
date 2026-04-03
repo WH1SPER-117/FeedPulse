@@ -9,6 +9,9 @@ export default function Dashboard() {
   const router = useRouter();
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+  const [search, setSearch] = useState<string>("");
   type SummaryType = {
     total: number;
     bySentiment: {
@@ -17,6 +20,7 @@ export default function Dashboard() {
       Neutral?: number;
       null?: number;
     };
+    mostCommonTag?: string;
     byStatus?: {
       [key: string]: number;
     };
@@ -33,6 +37,9 @@ export default function Dashboard() {
     avgPriority: 0,
   });
 
+  const [sortBy, setSortBy] = useState("date"); // date | priority | sentiment
+  const [sortOrder, setSortOrder] = useState("desc"); // desc | asc
+
   useEffect(() => {
     const token = localStorage.getItem("token");
 
@@ -42,7 +49,11 @@ export default function Dashboard() {
     }
 
     fetchFeedbacks();
-  }, [page]);
+  }, [page, selectedCategories, selectedStatuses, search, sortBy, sortOrder]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [selectedCategories, selectedStatuses, search, sortBy, sortOrder]);
 
   useEffect(() => {
     fetchSummary();
@@ -51,7 +62,7 @@ export default function Dashboard() {
   const fetchFeedbacks = async () => {
     try {
       const res = await fetch(
-        `http://localhost:4000/api/feedback?page=${page}&limit=10`
+        `http://localhost:4000/api/feedback?page=${page}&limit=10&category=${selectedCategories.join(",")}&status=${selectedStatuses.join(",")}&search=${search}&sortBy=${sortBy}&sortOrder=${sortOrder}`
       );
 
       const data = await res.json();
@@ -89,71 +100,16 @@ export default function Dashboard() {
   const openItems = summary.byStatus?.["In Review"] || 0;
 
   // Most Common Tag
-  const tagCount: Record<string, number> = {};
-  // Avg Priority
-  const avgPriority = summary.avgPriority || 0;
-  feedbacks.forEach((f) => {
-    (f.ai_tags || []).forEach((tag: string) => {
-      tagCount[tag] = (tagCount[tag] || 0) + 1;
-    });
-  });
+  const mostCommonTag = summary.mostCommonTag || "—";
 
-  const mostCommonTag =
-    Object.entries(tagCount).sort((a, b) => b[1] - a[1])[0]?.[0] || "—";
+  const avgPriority = summary.avgPriority || 0;
+
 
   const pending =
     (summary.bySentiment?.Neutral || 0) +
     (summary.bySentiment?.null || 0);
 
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
-  const [search, setSearch] = useState("");
-
-  const [sortBy, setSortBy] = useState("date"); // date | priority | sentiment
-  const [sortOrder, setSortOrder] = useState("desc"); // desc | asc
-
-  const filteredData = feedbacks
-    .filter((f) => {
-      const matchesCategory =
-        selectedCategories.length === 0 ||
-        selectedCategories.includes(f.category);
-
-      const matchesStatus =
-        selectedStatuses.length === 0 ||
-        selectedStatuses.includes(f.status);
-
-      const matchesSearch =
-        f.title.toLowerCase().includes(search.toLowerCase()) ||
-        (f.ai_tags || [])
-          .join(" ")
-          .toLowerCase()
-          .includes(search.toLowerCase());
-
-      return matchesCategory && matchesStatus && matchesSearch;
-    })
-    .sort((a, b) => {
-      if (sortBy === "date") {
-        return sortOrder === "desc"
-          ? new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          : new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-      }
-
-      if (sortBy === "priority") {
-        return sortOrder === "desc"
-          ? (b.ai_priority || 0) - (a.ai_priority || 0)
-          : (a.ai_priority || 0) - (b.ai_priority || 0);
-      }
-
-      if (sortBy === "sentiment") {
-        const map: any = { Positive: 3, Neutral: 2, Negative: 1 };
-
-        return sortOrder === "desc"
-          ? (map[b.ai_sentiment] || 0) - (map[a.ai_sentiment] || 0)
-          : (map[a.ai_sentiment] || 0) - (map[b.ai_sentiment] || 0);
-      }
-
-      return 0;
-    });
+  const filteredData = [...feedbacks];
 
   return (
    <div className="min-h-screen bg-gray-100 p-6">
