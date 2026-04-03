@@ -33,7 +33,7 @@ export default function FeedbackDetail() {
     fetchFeedback();
   }, []);
 
-  // ✅ UPDATE STATUS
+  //  UPDATE STATUS
   const updateStatus = async (status: string) => {
     setActionLoading(true);
 
@@ -61,7 +61,7 @@ export default function FeedbackDetail() {
     }
   };
 
-  // ✅ DELETE
+  // DELETE
   const deleteFeedback = async () => {
 
     setActionLoading(true);
@@ -88,11 +88,11 @@ export default function FeedbackDetail() {
     }
   };
 
-  // ✅ REGENERATE AI
+  // REGENERATE AI
   const regenerateAI = async () => {
     setActionLoading(true);
     toast(
-    "AI analysis may take a few seconds. If demand is high, it might fail. Please wait...",
+    "AI analysis may take a few seconds. If the system is experiencing high demand, regeneration may fail. Please wait...",
     {
         icon: "⏳",
         duration: 4000,
@@ -127,7 +127,7 @@ export default function FeedbackDetail() {
     <div className="min-h-screen bg-gray-100 p-6">
       <div className="max-w-4xl mx-auto bg-white rounded-xl shadow p-6">
 
-        {/* 🔙 HEADER */}
+        {/*  HEADER */}
         <div className="flex items-center justify-between mb-6">
           <button
             onClick={() => router.push("/dashboard")}
@@ -144,17 +144,17 @@ export default function FeedbackDetail() {
           </button>
         </div>
 
-        {/* 🧠 TITLE */}
+        {/*  TITLE */}
         <h1 className="text-2xl font-bold text-gray-800 mb-4">
           {data.title}
         </h1>
 
-        {/* 📝 DESCRIPTION */}
+        {/*  DESCRIPTION */}
         <p className="text-gray-600 mb-6">
           {data.description}
         </p>
 
-        {/* 📊 DETAILS */}
+        {/*  DETAILS */}
         <div className="grid grid-cols-2 gap-4 text-sm text-gray-700">
 
           <p><b>Category:</b> {data.category}</p>
@@ -171,7 +171,7 @@ export default function FeedbackDetail() {
 
         </div>
 
-        {/* ⚡ ACTIONS */}
+        {/*  ACTIONS */}
         <div className="flex gap-3 flex-wrap mt-6">
 
           {data.status === "New" && (

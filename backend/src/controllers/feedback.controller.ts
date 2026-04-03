@@ -26,7 +26,7 @@ export const createFeedback = async (req: Request, res: Response) => {
       submitterEmail,
     });
 
-    // 🔥 Trigger AI (non-blocking)
+    //  Trigger AI (non-blocking)
     analyzeAndUpdate(feedback._id.toString(), title, description);
 
     return res.status(201).json({
@@ -73,8 +73,14 @@ export const getFeedbacks = async (req: Request, res: Response) => {
     const query: any = {};
 
     // Filters
-    if (category) query.category = category;
-    if (status) query.status = status;
+    if (category) {
+      const categories = (category as string).split(",");
+      query.category = { $in: categories };
+    }
+    if (status) {
+      const statuses = (status as string).split(",");
+      query.status = { $in: statuses };
+    }
     if (sentiment) query.ai_sentiment = sentiment;
 
     const pageNum = parseInt(page as string);
@@ -260,6 +266,16 @@ export const getFeedbackSummary = async (req: Request, res: Response) => {
       bySentiment[item._id] = item.count;
     });
 
+    // Status aggregation
+    const byStatusRaw = await Feedback.aggregate([
+      { $group: { _id: "$status", count: { $sum: 1 } } }
+    ]);
+
+    const byStatus: any = {};
+    byStatusRaw.forEach((item) => {
+      byStatus[item._id] = item.count;
+    });
+
     // Average priority
     const avgPriorityRaw = await Feedback.aggregate([
       {
@@ -278,6 +294,7 @@ export const getFeedbackSummary = async (req: Request, res: Response) => {
         total,
         byCategory,
         bySentiment,
+        byStatus,
         avgPriority,
       },
     });

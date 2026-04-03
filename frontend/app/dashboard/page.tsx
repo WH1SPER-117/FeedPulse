@@ -17,6 +17,12 @@ export default function Dashboard() {
       Neutral?: number;
       null?: number;
     };
+    byStatus?: {
+      [key: string]: number;
+    };
+    byCategory?: {
+      [key: string]: number;
+    };
     avgPriority: number;
   };
   const sentimentOrder = ["Negative", "Positive", "Mixed", "Neutral", "null"];
@@ -24,6 +30,7 @@ export default function Dashboard() {
     total: 0,
     bySentiment: {},
     byStatus: {},
+    avgPriority: 0,
   });
 
   useEffect(() => {
@@ -73,10 +80,26 @@ export default function Dashboard() {
   }
 };
 
-  // 🧠 Basic stats
+  //  Basic stats
   const total = summary.total;
   const positive = summary.bySentiment?.Positive || 0;
   const negative = summary.bySentiment?.Negative || 0;
+
+  // Open Items
+  const openItems = summary.byStatus?.["In Review"] || 0;
+
+  // Most Common Tag
+  const tagCount: Record<string, number> = {};
+  // Avg Priority
+  const avgPriority = summary.avgPriority || 0;
+  feedbacks.forEach((f) => {
+    (f.ai_tags || []).forEach((tag: string) => {
+      tagCount[tag] = (tagCount[tag] || 0) + 1;
+    });
+  });
+
+  const mostCommonTag =
+    Object.entries(tagCount).sort((a, b) => b[1] - a[1])[0]?.[0] || "—";
 
   const pending =
     (summary.bySentiment?.Neutral || 0) +
@@ -101,7 +124,8 @@ export default function Dashboard() {
 
       const matchesSearch =
         f.title.toLowerCase().includes(search.toLowerCase()) ||
-        (f.ai_summary || "")
+        (f.ai_tags || [])
+          .join(" ")
           .toLowerCase()
           .includes(search.toLowerCase());
 
@@ -139,22 +163,31 @@ export default function Dashboard() {
   </h1>
 
   {/* 🔹 Summary Cards */}
-  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
 
-    <div className="bg-white p-4 rounded-lg shadow">
-      <p className="text-gray-500 text-sm">Total Feedback</p>
-      <h2 className="text-2xl font-bold text-gray-800">{total}</h2>
-    </div>
-    <div className="bg-white p-4 rounded-lg shadow">
-      <p className="text-gray-500 text-sm">Average Priority</p>
-      <h2 className="text-purple-600 text-2xl font-bold">
-        {summary.avgPriority?.toFixed(1)}
-      </h2>
-    </div>
-    <div className="bg-white p-4 rounded-lg shadow">
-      <p className="text-gray-500 text-sm">AI Summery Pending</p>
-      <h2 className="text-yellow-600 text-2xl font-bold">{pending}</h2>
-    </div>
+  <div className="bg-white p-4 rounded-lg shadow">
+    <p className="text-gray-500 text-sm">Total Feedback</p>
+    <h2 className="text-2xl font-bold text-gray-800">{total}</h2>
+  </div>
+
+  <div className="bg-white p-4 rounded-lg shadow">
+    <p className="text-gray-500 text-sm">Open Items</p>
+    <h2 className="text-blue-600 text-2xl font-bold">{openItems}</h2>
+  </div>
+
+  <div className="bg-white p-4 rounded-lg shadow">
+    <p className="text-gray-500 text-sm">Average Priority</p>
+    <h2 className="text-purple-600 text-2xl font-bold">
+      {avgPriority.toFixed(1)}
+    </h2>
+  </div>
+
+  <div className="bg-white p-4 rounded-lg shadow">
+    <p className="text-gray-500 text-sm">Most Common Tag</p>
+    <h2 className="text-green-600 text-xl font-semibold">
+      {mostCommonTag}
+    </h2>
+  </div>
 
   </div>
   <div className="bg-white p-5 rounded-lg shadow mb-6">
@@ -181,7 +214,7 @@ export default function Dashboard() {
     <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
 
       {sentimentOrder.map((key) => {
-        const value = summary.bySentiment?.[key] || 0;
+        const value = summary.bySentiment?.[key as keyof typeof summary.bySentiment] || 0;
 
         return (
           <div key={key} className="bg-gray-50 p-4 rounded-lg shadow text-center">
@@ -295,6 +328,7 @@ export default function Dashboard() {
             <th className="p-3">Title</th>
             <th className="p-3">Category</th>
             <th className="p-3">Status</th>
+            <th className="p-3">Date</th>
             <th className="p-3">Sentiment</th>
             <th className="p-3">Priority</th>
           </tr>
@@ -303,10 +337,10 @@ export default function Dashboard() {
         <tbody>
           {filteredData.map((f) => (
             <tr
-                key={f._id}
-                onClick={() => router.push(`/dashboard/${f._id}`)}
-                className="border-t hover:bg-gray-50 cursor-pointer"
-              >
+              key={f._id}
+              onClick={() => router.push(`/dashboard/${f._id}`)}
+              className="border-t hover:bg-gray-50 cursor-pointer"
+            >
 
               <td className="p-3 font-medium text-gray-800">
                 {f.title}
@@ -318,6 +352,10 @@ export default function Dashboard() {
 
               <td className="p-3 text-gray-700">
                 {f.status}
+              </td>
+
+              <td className="p-3 text-gray-700">
+                {new Date(f.createdAt).toLocaleDateString()}
               </td>
 
               <td className={`p-3 font-medium ${
