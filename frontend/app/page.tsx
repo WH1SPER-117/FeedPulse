@@ -226,6 +226,7 @@ export default function Home() {
               Your Email (optional)
             </label>
             <input
+              type="email"
               name="submitterEmail"
               placeholder="example@email.com"
               value={form.submitterEmail}

@@ -26,7 +26,7 @@ export const createFeedback = async (req: Request, res: Response) => {
       submitterEmail,
     });
 
-    // 🔥 Trigger AI (non-blocking)
+    //  Trigger AI (non-blocking)
     analyzeAndUpdate(feedback._id.toString(), title, description);
 
     return res.status(201).json({
@@ -68,20 +68,51 @@ const analyzeAndUpdate = async (
 
 export const getFeedbacks = async (req: Request, res: Response) => {
   try {
-    const { page = "1", limit = "10", category, status, sentiment } = req.query;
-
+    const { page = "1", limit = "10", category, status, sentiment, search, sortBy = "date", sortOrder = "desc" } = req.query;
     const query: any = {};
 
+
+    if (search && (search as string).trim() !== "") {
+      query.$or = [
+        { title: { $regex: search, $options: "i" } },
+        { ai_tags: { $regex: search, $options: "i" } },
+      ];
+    }
+
     // Filters
-    if (category) query.category = category;
-    if (status) query.status = status;
+    if (category && (category as string).trim() !== "") {
+      const categories = (category as string).split(",").filter(Boolean);
+      if (categories.length > 0) {
+        query.category = { $in: categories };
+      }
+    }
+    if (status && (status as string).trim() !== "") {
+      const statuses = (status as string).split(",").filter(Boolean);
+      if (statuses.length > 0) {
+        query.status = { $in: statuses };
+      }
+    }
     if (sentiment) query.ai_sentiment = sentiment;
 
     const pageNum = parseInt(page as string);
     const limitNum = parseInt(limit as string);
 
+    let sortQuery: any = {};
+
+    if (sortBy === "date") {
+      sortQuery.createdAt = sortOrder === "desc" ? -1 : 1;
+    }
+
+    if (sortBy === "priority") {
+      sortQuery.ai_priority = sortOrder === "desc" ? -1 : 1;
+    }
+
+    if (sortBy === "sentiment") {
+      sortQuery.ai_sentiment = sortOrder === "desc" ? -1 : 1;
+    }
+
     const feedbacks = await Feedback.find(query)
-      .sort({ createdAt: -1 }) // newest first
+      .sort(sortQuery) 
       .skip((pageNum - 1) * limitNum)
       .limit(limitNum);
 
@@ -260,6 +291,16 @@ export const getFeedbackSummary = async (req: Request, res: Response) => {
       bySentiment[item._id] = item.count;
     });
 
+    // Status aggregation
+    const byStatusRaw = await Feedback.aggregate([
+      { $group: { _id: "$status", count: { $sum: 1 } } }
+    ]);
+
+    const byStatus: any = {};
+    byStatusRaw.forEach((item) => {
+      byStatus[item._id] = item.count;
+    });
+
     // Average priority
     const avgPriorityRaw = await Feedback.aggregate([
       {
@@ -272,19 +313,76 @@ export const getFeedbackSummary = async (req: Request, res: Response) => {
 
     const avgPriority = avgPriorityRaw[0]?.avg || 0;
 
+    // Most Common Tag
+    const tagAggregation = await Feedback.aggregate([
+      { $unwind: "$ai_tags" },
+      {
+        $group: {
+          _id: "$ai_tags",
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { count: -1 } },
+      { $limit: 1 },
+    ]);
+
+    const mostCommonTag = tagAggregation[0]?._id || null;
+
     return res.status(200).json({
       success: true,
       data: {
         total,
         byCategory,
         bySentiment,
+        byStatus,
         avgPriority,
+        mostCommonTag,
       },
     });
   } catch (error: any) {
     return res.status(500).json({
       success: false,
       message: "Failed to generate summary",
+      error: error.message,
+    });
+  }
+};
+
+export const regenerateAI = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const feedback = await Feedback.findById(id);
+
+    if (!feedback) {
+      return res.status(404).json({
+        success: false,
+        message: "Feedback not found",
+      });
+    }
+
+    const aiResult = await analyzeFeedback(
+      feedback.title,
+      feedback.description
+    );
+
+    feedback.ai_category = aiResult.category;
+    feedback.ai_sentiment = aiResult.sentiment;
+    feedback.ai_priority = aiResult.priority_score || 0;
+    feedback.ai_summary = aiResult.summary;
+    feedback.ai_tags = aiResult.tags;
+    feedback.ai_processed = true;
+
+    await feedback.save();
+
+    return res.status(200).json({
+      success: true,
+      data: feedback,
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to regenerate AI",
       error: error.message,
     });
   }
