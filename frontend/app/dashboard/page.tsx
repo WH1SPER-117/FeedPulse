@@ -7,6 +7,24 @@ export default function Dashboard() {
   const [feedbacks, setFeedbacks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  type SummaryType = {
+    total: number;
+    bySentiment: {
+      Positive?: number;
+      Negative?: number;
+      Neutral?: number;
+      null?: number;
+    };
+    avgPriority: number;
+  };
+  const sentimentOrder = ["Negative", "Positive", "Mixed", "Neutral", "null"];
+  const [summary, setSummary] = useState<SummaryType>({
+    total: 0,
+    bySentiment: {},
+    byStatus: {},
+  });
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -17,15 +35,23 @@ export default function Dashboard() {
     }
 
     fetchFeedbacks();
+  }, [page]);
+
+  useEffect(() => {
+    fetchSummary();
   }, []);
 
   const fetchFeedbacks = async () => {
     try {
-      const res = await fetch("http://localhost:4000/api/feedback");
+      const res = await fetch(
+        `http://localhost:4000/api/feedback?page=${page}&limit=10`
+      );
+
       const data = await res.json();
 
       if (data.success) {
         setFeedbacks(data.data);
+        setTotalPages(data.pagination.totalPages);
       }
     } catch (err) {
       console.error("Failed to fetch feedbacks");
@@ -34,11 +60,27 @@ export default function Dashboard() {
     }
   };
 
+  const fetchSummary = async () => {
+  try {
+    const res = await fetch("http://localhost:4000/api/feedback/summary");
+    const data = await res.json();
+
+    if (data.success) {
+      setSummary(data.data);
+    }
+  } catch (err) {
+    console.error("Failed to fetch summary");
+  }
+};
+
   // 🧠 Basic stats
-  const total = feedbacks.length;
-  const positive = feedbacks.filter(f => f.ai_sentiment === "Positive").length;
-  const negative = feedbacks.filter(f => f.ai_sentiment === "Negative").length;
-  const pending = feedbacks.filter(f => f.status === "New").length;
+  const total = summary.total;
+  const positive = summary.bySentiment?.Positive || 0;
+  const negative = summary.bySentiment?.Negative || 0;
+
+  const pending =
+    (summary.bySentiment?.Neutral || 0) +
+    (summary.bySentiment?.null || 0);
 
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
@@ -97,29 +139,61 @@ export default function Dashboard() {
   </h1>
 
   {/* 🔹 Summary Cards */}
-  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
 
     <div className="bg-white p-4 rounded-lg shadow">
       <p className="text-gray-500 text-sm">Total Feedback</p>
       <h2 className="text-2xl font-bold text-gray-800">{total}</h2>
     </div>
-
     <div className="bg-white p-4 rounded-lg shadow">
-      <p className="text-gray-500 text-sm">Positive</p>
-      <h2 className="text-green-600 text-2xl font-bold">{positive}</h2>
+      <p className="text-gray-500 text-sm">Average Priority</p>
+      <h2 className="text-purple-600 text-2xl font-bold">
+        {summary.avgPriority?.toFixed(1)}
+      </h2>
     </div>
-
     <div className="bg-white p-4 rounded-lg shadow">
-      <p className="text-gray-500 text-sm">Negative</p>
-      <h2 className="text-red-600 text-2xl font-bold">{negative}</h2>
-    </div>
-
-    <div className="bg-white p-4 rounded-lg shadow">
-      <p className="text-gray-500 text-sm">New</p>
-      <h2 className="text-blue-600 text-2xl font-bold">{pending}</h2>
+      <p className="text-gray-500 text-sm">AI Summery Pending</p>
+      <h2 className="text-yellow-600 text-2xl font-bold">{pending}</h2>
     </div>
 
   </div>
+  <div className="bg-white p-5 rounded-lg shadow mb-6">
+    <h2 className="text-lg font-semibold text-gray-800 mb-4">
+      Feedback by Category
+    </h2>
+
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+
+      {Object.entries(summary.byCategory || {}).map(([key, value]) => (
+        <div key={key} className="bg-gray-50 p-3 rounded-lg shadow text-center">
+          <p className="text-sm text-gray-500">{key}</p>
+          <p className="text-xl font-bold text-gray-800">{value as number}</p>
+        </div>
+      ))}
+
+    </div>
+  </div>
+  <div className="bg-white p-5 rounded-lg shadow mb-6">
+    <h2 className="text-lg font-semibold text-gray-800 mb-4">
+      Sentiment Breakdown
+    </h2>
+
+    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+
+      {sentimentOrder.map((key) => {
+        const value = summary.bySentiment?.[key] || 0;
+
+        return (
+          <div key={key} className="bg-gray-50 p-4 rounded-lg shadow text-center">
+            <p className="text-gray-500">{key}</p>
+            <h3 className="text-xl font-bold text-gray-800">{value}</h3>
+          </div>
+        );
+      })}
+
+    </div>
+  </div>
+
 
   <div className="bg-white p-5 rounded-xl shadow mb-6 space-y-5 border">
 
@@ -263,6 +337,31 @@ export default function Dashboard() {
       </table>
     )}
   </div>
+  <div className="flex justify-center items-center gap-4 mt-6">
+
+    <button
+      disabled={page === 1}
+      onClick={() => setPage(page - 1)}
+      className="px-4 py-2 bg-blue-700 rounded disabled:opacity-50"
+    >
+      Prev
+    </button>
+
+    <span className="text-gray-700 font-medium">
+      Page {page} of {totalPages}
+    </span>
+
+    <button
+      disabled={page === totalPages}
+      onClick={() => setPage(page + 1)}
+      className="px-4 py-2 bg-blue-700 rounded disabled:opacity-50"
+    >
+      Next
+    </button>
+
+  </div>
+
+
 </div>
   );
 }
