@@ -7,10 +7,12 @@ import { deleteFeedback } from "../controllers/feedback.controller";
 import { getFeedbackSummary } from "../controllers/feedback.controller";
 import { protect } from "../middleware/auth.middleware";
 import { regenerateAI } from "../controllers/feedback.controller";
+import { feedbackLimiter } from "../middleware/rateLimit.middleware";
+
 
 const router = express.Router();
 
-router.post("/", createFeedback);
+router.post("/", feedbackLimiter, createFeedback);
 router.get("/", getFeedbacks);
 router.get("/summary", getFeedbackSummary);
 router.get("/:id", getFeedbackById);
