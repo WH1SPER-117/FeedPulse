@@ -1,7 +1,6 @@
 # FeedPulse — AI-Powered Product Feedback Platform
-FeedPulse is a full-stack web application that allows users to submit product feedback and uses Google Gemini AI to automatically categorize, prioritize, and summarize it.
+AI-powered feedback analysis platform that automatically categorizes, prioritizes, and summarizes user feedback in real-time.
 
-It helps product teams understand what users want faster and make better decisions.
 ## Tech Stack
 
 Frontend:
@@ -23,16 +22,16 @@ AI:
 
 ## Features
 
-- Submit feedback without login
-- AI categorization, sentiment, summerizing and priority scoring
-- Admin dashboard with filters and status updates
-- Search and pagination
-- REST API with structured responses
+- AI-powered sentiment analysis, categorization, summarization, and priority scoring
+- Spam protection using rate limiting
+- Admin dashboard for managing and updating feedback
+- Advanced filtering, search, and pagination
+- Secure API with JWT-based authentication
 
 ## Run Locally
 
 ### 1. Clone the repo
-git clone [https://github.com/your-username/feedpulse.git](https://github.com/WH1SPER-117/FeedPulse.git)
+git clone [https://github.com/WH1SPER-117/feedpulse.git](https://github.com/WH1SPER-117/FeedPulse.git)
 
 ### 2. Install dependencies
 
@@ -63,6 +62,11 @@ npm run dev
 **Frontend:**
 npm run dev
 
+## Architecture Overview
+- Frontend (Next.js) communicates with Express backend via REST API
+- Backend processes feedback and integrates with Gemini API for AI analysis
+- MongoDB stores feedback, user data, and AI results
+
 ## Screenshots
 
 ### Feedback Form
@@ -77,13 +81,20 @@ npm run dev
 
 ## API Endpoints
 
+### Auth
 - POST /api/auth/login
-- POST /api/feedback  
-- GET /api/feedback  
-- PATCH /api/feedback/:id  
-- DELETE /api/feedback/:id  
-- GET /api/feedback/summery
+
+### Feedback
+- POST /api/feedback
+- GET /api/feedback
+- PATCH /api/feedback/:id
+- DELETE /api/feedback/:id
+
+### AI
 - POST /api/feedback/:id/regenerate-ai
+- GET /api/feedback/summary
+
+### Status
 - PATCH /api/feedback/:id/status
 
 ## Future Improvements
