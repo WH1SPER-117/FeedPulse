@@ -289,3 +289,43 @@ export const getFeedbackSummary = async (req: Request, res: Response) => {
     });
   }
 };
+
+export const regenerateAI = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const feedback = await Feedback.findById(id);
+
+    if (!feedback) {
+      return res.status(404).json({
+        success: false,
+        message: "Feedback not found",
+      });
+    }
+
+    const aiResult = await analyzeFeedback(
+      feedback.title,
+      feedback.description
+    );
+
+    feedback.ai_category = aiResult.category;
+    feedback.ai_sentiment = aiResult.sentiment;
+    feedback.ai_priority = aiResult.priority_score || 0;
+    feedback.ai_summary = aiResult.summary;
+    feedback.ai_tags = aiResult.tags;
+    feedback.ai_processed = true;
+
+    await feedback.save();
+
+    return res.status(200).json({
+      success: true,
+      data: feedback,
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to regenerate AI",
+      error: error.message,
+    });
+  }
+};

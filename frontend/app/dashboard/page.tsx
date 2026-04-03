@@ -302,7 +302,11 @@ export default function Dashboard() {
 
         <tbody>
           {filteredData.map((f) => (
-            <tr key={f._id} className="border-t hover:bg-gray-50">
+            <tr
+                key={f._id}
+                onClick={() => router.push(`/dashboard/${f._id}`)}
+                className="border-t hover:bg-gray-50 cursor-pointer"
+              >
 
               <td className="p-3 font-medium text-gray-800">
                 {f.title}
